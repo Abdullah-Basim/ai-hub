@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MessageSquare, ImageIcon, Film, ArrowRight } from "lucide-react"
-import { prisma } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
 
 export default async function HistoryPage() {
   const supabase = createServerComponentClient({ cookies })

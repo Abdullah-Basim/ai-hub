@@ -2,9 +2,9 @@ import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
-import { TextPlayground } from "@/components/dashboard/text-playground"
+import { ImagePlayground } from "@/components/dashboard/image-playground"
 
-export default async function TextPlaygroundPage({ params }: { params: { modelId: string } }) {
+export default async function ImagePlaygroundPage({ params }: { params: { modelId: string } }) {
   const supabase = createServerComponentClient({ cookies })
   const {
     data: { session },
@@ -23,7 +23,7 @@ export default async function TextPlaygroundPage({ params }: { params: { modelId
     },
   })
 
-  if (!model || model.type !== "text") {
+  if (!model || model.type !== "image") {
     notFound()
   }
 
@@ -47,5 +47,17 @@ export default async function TextPlaygroundPage({ params }: { params: { modelId
     },
   })
 
-  return <TextPlayground model={model} usageCount={usage?.count || 0} userPlan={user?.plan || "free"} />
+  // Fetch user's image files
+  const files = await prisma.file.findMany({
+    where: {
+      userId: session.user.id,
+      type: "image",
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 10,
+  })
+
+  return <ImagePlayground model={model} usageCount={usage?.count || 0} userPlan={user?.plan || "free"} files={files} />
 }

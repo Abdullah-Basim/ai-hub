@@ -4,7 +4,17 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/components/auth-provider"
-import { LayoutDashboard, MessageSquare, ImageIcon, Film, History, Settings, LogOut, Sparkles } from "lucide-react"
+import {
+  LayoutDashboard,
+  MessageSquare,
+  ImageIcon,
+  Film,
+  History,
+  Settings,
+  LogOut,
+  Sparkles,
+  FileImage,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -27,6 +37,11 @@ const navItems = [
     title: "Video Models",
     href: "/dashboard/video",
     icon: Film,
+  },
+  {
+    title: "Files",
+    href: "/dashboard/files",
+    icon: FileImage,
   },
   {
     title: "History",

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
-import { Groq } from "groq-sdk"
+import { put } from "@vercel/blob"
+import { nanoid } from "nanoid"
 
 export async function POST(request: Request) {
   try {
@@ -15,21 +16,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { modelId, prompt } = await request.json()
+    const { prompt, modelId, style, dimensions } = await request.json()
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 })
     }
 
-    if (!modelId) {
-      return NextResponse.json({ error: "Model ID is required" }, { status: 400 })
-    }
-
     // Get the model from the database
-    const model = await prisma.model.findFirst({
+    const model = await prisma.model.findUnique({
       where: {
-        modelId: modelId,
-        provider: "Groq",
+        id: modelId,
       },
     })
 
@@ -64,23 +60,37 @@ export async function POST(request: Request) {
       }
     }
 
-    // Initialize Groq client
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY!,
+    // Simulate a delay
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Generate a unique filename for the generated image
+    const filename = `${nanoid()}.png`
+    const pathname = `generated/${user.id}/${filename}`
+
+    // For demo purposes, we'll use a placeholder image
+    const placeholderUrl = `https://placehold.co/512x512/random/png?text=${encodeURIComponent(prompt.substring(0, 20))}`
+
+    // Fetch the placeholder image
+    const imageResponse = await fetch(placeholderUrl)
+    const imageBlob = await imageResponse.blob()
+
+    // Upload to Vercel Blob
+    const { url } = await put(pathname, imageBlob, {
+      access: "public",
+      addRandomSuffix: false,
     })
 
-    // Call the Groq API
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      model: modelId,
+    // Save file metadata to database
+    const fileRecord = await prisma.file.create({
+      data: {
+        userId: user.id,
+        type: "image",
+        storagePath: pathname,
+        filename: `${model.name} - ${new Date().toLocaleDateString()}`,
+        size: imageBlob.size,
+        expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      },
     })
-
-    const text = completion.choices[0]?.message?.content || ""
 
     // Update usage count for premium models
     if (model.tier !== "free") {
@@ -110,13 +120,13 @@ export async function POST(request: Request) {
         userId: user.id,
         modelId: model.id,
         input: prompt,
-        output: text,
+        output: url,
       },
     })
 
-    return NextResponse.json({ text })
+    return NextResponse.json({ imageUrl: url, file: fileRecord })
   } catch (error) {
-    console.error("Error calling Groq API:", error)
-    return NextResponse.json({ error: "Failed to generate content" }, { status: 500 })
+    console.error("Error generating mock image:", error)
+    return NextResponse.json({ error: "Failed to generate image" }, { status: 500 })
   }
 }

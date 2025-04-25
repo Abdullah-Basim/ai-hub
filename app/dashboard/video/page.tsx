@@ -1,7 +1,7 @@
 import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { ModelCard } from "@/components/dashboard/model-card"
-import { prisma } from "@/lib/db"
+import { prisma } from "@/lib/prisma"
 
 export default async function VideoModelsPage() {
   const supabase = createServerComponentClient({ cookies })
