@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  email         String        @unique
+  plan          String        @default("free") // free, premium
+  credits       Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  prompts       Prompt[]
+  files         File[]
+  transactions  Transaction[]
+  modelUsage    ModelUsage[]
+}
+
+model Model {
+  id          String      @id @default(uuid())
+  name        String
+  description String
+  type        String      // text, image, video
+  tier        String      // free, premium, ultra-premium
+  provider    String      // openai, gemini, groq, etc.
+  modelId     String      // actual model ID used in API calls
+  apiConfig   Json?       // additional API configuration
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  prompts     Prompt[]
+  modelUsage  ModelUsage[]
+}
+
+model Prompt {
+  id        String   @id @default(uuid())
+  userId    String
+  modelId   String
+  input     String   @db.Text
+  output    String?  @db.Text
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model     Model    @relation(fields: [modelId], references: [id])
+}
+
+model File {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String   // image, pdf, etc.
+  storagePath String
+  filename    String
+  size        Int
+  expiry      DateTime
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // subscription, credits
+  amount    Float
+  status    String   // completed, pending, failed
+  stripeId  String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ModelUsage {
+  id        String   @id @default(uuid())
+  userId    String
+  modelId   String
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model     Model    @relation(fields: [modelId], references: [id])
+
+  @@unique([userId, modelId])
+}
