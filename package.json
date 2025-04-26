@@ -67,8 +67,8 @@
     "@prisma/client": "latest",
     "child_process": "latest",
     "util": "latest",
-    "groq-sdk": "latest",
-    "@neondatabase/serverless": "latest"
+    "@neondatabase/serverless": "latest",
+    "groq-sdk": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

@@ -1,0 +1,5 @@
+{
+  "project_id": "aihub",
+  "db_schema": "public",
+  "db_connection_string": "postgresql://postgres:postgres@localhost:5432/aihub"
+}

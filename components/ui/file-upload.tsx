@@ -1,33 +1,32 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { useToast } from "@/hooks/use-toast"
-import { Upload, X } from "lucide-react"
+import { Upload, X, FileIcon, ImageIcon } from "lucide-react"
 
 interface FileUploadProps {
   onUploadComplete?: (url: string, file: any) => void
   accept?: string
   maxSize?: number // in bytes
   className?: string
+  multiple?: boolean
 }
 
 export function FileUpload({
   onUploadComplete,
   accept = "image/*",
   maxSize = 10 * 1024 * 1024, // 10MB default
-  className,
+  className = "",
+  multiple = false,
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { toast } = useToast()
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -41,6 +40,7 @@ export function FileUpload({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
+    setError(null)
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFileSelect(e.dataTransfer.files[0])
@@ -48,23 +48,18 @@ export function FileUpload({
   }
 
   const handleFileSelect = (file: File) => {
+    // Reset error state
+    setError(null)
+
     // Validate file type
     if (!file.type.match(accept.replace("*", "."))) {
-      toast({
-        title: "Invalid file type",
-        description: `Please upload a file of type: ${accept}`,
-        variant: "destructive",
-      })
+      setError(`Please upload a file of type: ${accept}`)
       return
     }
 
     // Validate file size
     if (file.size > maxSize) {
-      toast({
-        title: "File too large",
-        description: `File size should be less than ${maxSize / (1024 * 1024)}MB`,
-        variant: "destructive",
-      })
+      setError(`File size should be less than ${maxSize / (1024 * 1024)}MB`)
       return
     }
 
@@ -87,6 +82,7 @@ export function FileUpload({
 
     setIsUploading(true)
     setProgress(0)
+    setError(null)
 
     try {
       // Create form data
@@ -110,18 +106,13 @@ export function FileUpload({
       clearInterval(progressInterval)
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to upload file")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to upload file")
       }
 
       setProgress(100)
 
       const data = await response.json()
-
-      toast({
-        title: "File uploaded",
-        description: "Your file has been uploaded successfully",
-      })
 
       if (onUploadComplete) {
         onUploadComplete(data.url, data.file)
@@ -136,11 +127,7 @@ export function FileUpload({
       }, 1000)
     } catch (error) {
       console.error("Error uploading file:", error)
-      toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "Failed to upload file",
-        variant: "destructive",
-      })
+      setError(error instanceof Error ? error.message : "Failed to upload file")
       setIsUploading(false)
       setProgress(0)
     }
@@ -149,26 +136,49 @@ export function FileUpload({
   const handleCancel = () => {
     setSelectedFile(null)
     setPreview(null)
+    setError(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
   }
 
+  const getFileIcon = () => {
+    if (selectedFile?.type.startsWith("image/")) {
+      return <ImageIcon className="h-6 w-6" />
+    }
+    return <FileIcon className="h-6 w-6" />
+  }
+
+  const formatFileSize = (size: number) => {
+    if (size < 1024) {
+      return `${size} B`
+    } else if (size < 1024 * 1024) {
+      return `${(size / 1024).toFixed(1)} KB`
+    } else {
+      return `${(size / (1024 * 1024)).toFixed(1)} MB`
+    }
+  }
+
   return (
     <div className={`w-full ${className}`}>
+      {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm">{error}</div>}
+
       {!selectedFile ? (
         <div
           className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-            isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50"
+            isDragging ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          aria-label="Upload file"
         >
-          <Upload className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
+          <Upload className="mx-auto h-10 w-10 text-gray-400 mb-2" />
           <p className="text-sm font-medium">Drag and drop your file here, or click to select</p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             {accept === "image/*" ? "PNG, JPG, GIF up to " : "Files up to "}
             {maxSize / (1024 * 1024)}MB
           </p>
@@ -177,7 +187,9 @@ export function FileUpload({
             ref={fileInputRef}
             className="hidden"
             accept={accept}
+            multiple={multiple}
             onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+            aria-label="File input"
           />
         </div>
       ) : (
@@ -189,17 +201,19 @@ export function FileUpload({
                   <img src={preview || "/placeholder.svg"} alt="Preview" className="w-full h-full object-cover" />
                 </div>
               ) : (
-                <div className="w-12 h-12 rounded bg-muted flex items-center justify-center mr-3">
-                  <Upload className="h-6 w-6 text-muted-foreground" />
+                <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center mr-3">
+                  {getFileIcon()}
                 </div>
               )}
               <div className="overflow-hidden">
-                <p className="text-sm font-medium truncate">{selectedFile.name}</p>
-                <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                <p className="text-sm font-medium truncate" title={selectedFile.name}>
+                  {selectedFile.name}
+                </p>
+                <p className="text-xs text-gray-500">{formatFileSize(selectedFile.size)}</p>
               </div>
             </div>
             {!isUploading && (
-              <Button variant="ghost" size="icon" onClick={handleCancel}>
+              <Button variant="ghost" size="icon" onClick={handleCancel} aria-label="Cancel">
                 <X className="h-4 w-4" />
               </Button>
             )}
@@ -207,8 +221,13 @@ export function FileUpload({
 
           {isUploading ? (
             <div className="space-y-2">
-              <Progress value={progress} className="h-2" />
-              <p className="text-xs text-center text-muted-foreground">Uploading... {progress}%</p>
+              <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all duration-300 ease-in-out"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="text-xs text-center text-gray-500">Uploading... {progress}%</p>
             </div>
           ) : (
             <Button onClick={handleUpload} className="w-full mt-2">

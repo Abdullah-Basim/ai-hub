@@ -13,79 +13,165 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING") // Used for migrations
 }
 
+// User model with authentication fields
 model User {
-  id            String        @id @default(uuid())
-  name          String
-  email         String        @unique
-  plan          String        @default("free") // free, premium
-  credits       Int           @default(0)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  prompts       Prompt[]
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  avatarUrl     String?
+  
+  // Authentication fields
+  emailVerified DateTime?
+  
+  // User preferences and settings
+  plan          String    @default("free") // free, pro, enterprise
+  credits       Int       @default(0)
+  
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
   files         File[]
-  transactions  Transaction[]
-  modelUsage    ModelUsage[]
+  apiKeys       ApiKey[]
+  usageRecords  UsageRecord[]
+  sessions      Session[]
+  
+  // Metadata
+  metadata      Json?     @default("{}")
+  
+  @@index([email])
 }
 
-model Model {
-  id          String      @id @default(uuid())
-  name        String
-  description String
-  type        String      // text, image, video
-  tier        String      // free, premium, ultra-premium
-  provider    String      // openai, gemini, groq, etc.
-  modelId     String      // actual model ID used in API calls
-  apiConfig   Json?       // additional API configuration
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  prompts     Prompt[]
-  modelUsage  ModelUsage[]
+// Session model for authentication
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  accessToken  String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
 }
 
-model Prompt {
-  id        String   @id @default(uuid())
-  userId    String
-  modelId   String
-  input     String   @db.Text
-  output    String?  @db.Text
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  model     Model    @relation(fields: [modelId], references: [id])
-}
-
+// File model for storing file metadata
 model File {
   id          String   @id @default(uuid())
   userId      String
-  type        String   // image, pdf, etc.
-  storagePath String
-  filename    String
-  size        Int
-  expiry      DateTime
+  name        String
+  key         String   @unique // Storage key/path
+  url         String?
+  size        Int      // Size in bytes
+  type        String   // MIME type
+  
+  // File status
+  status      String   @default("processing") // processing, ready, error
+  
+  // Timestamps
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  expiresAt   DateTime?
+  
+  // Relations
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  metadata    Json?    @default("{}")
+  
+  @@index([userId])
+  @@index([key])
 }
 
-model Transaction {
-  id        String   @id @default(uuid())
-  userId    String
-  type      String   // subscription, credits
-  amount    Float
-  status    String   // completed, pending, failed
-  stripeId  String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+// API Key model for managing access
+model ApiKey {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  key         String   @unique
+  
+  // API Key permissions
+  permissions String[] @default([])
+  
+  // API Key status
+  isActive    Boolean  @default(true)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  expiresAt   DateTime?
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageRecords UsageRecord[]
+  
+  @@index([userId])
+  @@index([key])
 }
 
-model ModelUsage {
-  id        String   @id @default(uuid())
-  userId    String
-  modelId   String
-  count     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  model     Model    @relation(fields: [modelId], references: [id])
+// Usage tracking model
+model UsageRecord {
+  id          String   @id @default(uuid())
+  userId      String
+  apiKeyId    String?
+  
+  // Usage details
+  service     String   // api, storage, etc.
+  operation   String   // get, list, create, etc.
+  resourceId  String?  // ID of the resource being accessed
+  
+  // Usage metrics
+  units       Int      @default(1)
+  cost        Float    @default(0)
+  
+  // Request details
+  statusCode  Int?
+  
+  // Timestamps
+  timestamp   DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiKey      ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([apiKeyId])
+  @@index([service, operation])
+  @@index([timestamp])
+}
 
-  @@unique([userId, modelId])
+// Feature flags model
+model FeatureFlag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isEnabled   Boolean  @default(false)
+  
+  // Targeting rules
+  rules       Json?    @default("{}")
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Webhook model for integrations
+model Webhook {
+  id          String   @id @default(uuid())
+  url         String
+  events      String[] // Array of event types this webhook subscribes to
+  
+  // Webhook status
+  isActive    Boolean  @default(true)
+  secret      String?  // Secret for signature verification
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Metadata
+  metadata    Json?    @default("{}")
 }

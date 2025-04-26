@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma"
 
 export async function POST(request: Request) {
   try {
+    // Authenticate the user
     const supabase = createRouteHandlerClient({ cookies })
     const {
       data: { session },
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Get the file from the request
     const formData = await request.formData()
     const file = formData.get("file") as File
 
@@ -23,18 +25,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 })
     }
 
-    // Check file type
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Only image files are supported" }, { status: 400 })
-    }
-
-    // Check file size (limit to 10MB)
+    // Validate file size (limit to 10MB)
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json({ error: "File size exceeds 10MB limit" }, { status: 400 })
     }
 
     // Generate a unique filename
-    const extension = file.name.split(".").pop()
+    const extension = file.name.split(".").pop() || ""
     const uniqueFilename = `${nanoid()}.${extension}`
     const pathname = `uploads/${session.user.id}/${uniqueFilename}`
 
@@ -48,17 +45,35 @@ export async function POST(request: Request) {
     const fileRecord = await prisma.file.create({
       data: {
         userId: session.user.id,
-        type: file.type.split("/")[0], // e.g., "image" from "image/png"
-        storagePath: pathname,
-        filename: file.name,
+        name: file.name,
+        key: pathname,
+        url,
         size: file.size,
-        expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        type: file.type,
+        status: "ready",
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      },
+    })
+
+    // Track usage
+    await prisma.usageRecord.create({
+      data: {
+        userId: session.user.id,
+        service: "storage",
+        operation: "upload",
+        resourceId: fileRecord.id,
+        units: Math.ceil(file.size / 1024), // Convert to KB
+        cost: 0, // Free for now
+        statusCode: 200,
       },
     })
 
     return NextResponse.json({ url, file: fileRecord })
   } catch (error) {
     console.error("Error uploading file:", error)
-    return NextResponse.json({ error: "Failed to upload file" }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to upload file" },
+      { status: 500 },
+    )
   }
 }

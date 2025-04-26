@@ -11,7 +11,7 @@ async function main() {
     await execAsync("npx prisma migrate dev --name init")
 
     console.log("Seeding database...")
-    await execAsync("npx ts-node prisma/seed.ts")
+    await execAsync("npx prisma db seed")
 
     console.log("Database setup completed successfully!")
   } catch (error) {

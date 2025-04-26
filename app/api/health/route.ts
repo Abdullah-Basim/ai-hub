@@ -1,15 +1,27 @@
 import { NextResponse } from "next/server"
-import { testConnection } from "@/lib/db"
+import { testDatabaseConnection } from "@/lib/prisma"
+import { validateEnvVars } from "@/lib/env"
 
 export async function GET() {
   try {
-    const dbConnected = await testConnection()
+    // Check database connection
+    const dbStatus = await testDatabaseConnection()
+
+    // Check environment variables
+    const envStatus = validateEnvVars()
 
     return NextResponse.json({
-      status: "ok",
+      status: dbStatus.success && envStatus.valid ? "ok" : "warning",
       timestamp: new Date().toISOString(),
-      database: dbConnected ? "connected" : "disconnected",
       environment: process.env.NODE_ENV,
+      database: {
+        connected: dbStatus.success,
+        error: dbStatus.success ? undefined : dbStatus.error,
+      },
+      env: {
+        valid: envStatus.valid,
+        missing: envStatus.missing.length > 0 ? envStatus.missing : undefined,
+      },
     })
   } catch (error) {
     console.error("Health check error:", error)

@@ -1,0 +1,17 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Copy the rest of the application
+COPY . .
+
+# Generate
+
+
+## 24. Updated Next.js Config
+
+Let's update the Next.js config with modern configuration:

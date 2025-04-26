@@ -10,21 +10,16 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession()
 
-  // If the user is not signed in and the route is protected, redirect to the login page
-  if (!session && req.nextUrl.pathname.startsWith("/dashboard")) {
+  // Protected routes - redirect to login if not authenticated
+  if (!session && isProtectedRoute(req.nextUrl.pathname)) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = "/login"
     redirectUrl.searchParams.set("redirectedFrom", req.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // If the user is signed in and trying to access auth pages, redirect to the dashboard
-  if (
-    session &&
-    (req.nextUrl.pathname === "/login" ||
-      req.nextUrl.pathname === "/signup" ||
-      req.nextUrl.pathname === "/reset-password")
-  ) {
+  // Auth routes - redirect to dashboard if already authenticated
+  if (session && isAuthRoute(req.nextUrl.pathname)) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = "/dashboard"
     return NextResponse.redirect(redirectUrl)
@@ -33,6 +28,20 @@ export async function middleware(req: NextRequest) {
   return res
 }
 
+// Helper function to check if a route is protected
+function isProtectedRoute(pathname: string): boolean {
+  const protectedRoutes = ["/dashboard", "/settings", "/profile", "/api"]
+
+  return protectedRoutes.some((route) => pathname.startsWith(route))
+}
+
+// Helper function to check if a route is an auth route
+function isAuthRoute(pathname: string): boolean {
+  const authRoutes = ["/login", "/signup", "/reset-password"]
+
+  return authRoutes.includes(pathname)
+}
+
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/signup", "/reset-password"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 }
