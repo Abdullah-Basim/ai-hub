@@ -18,6 +18,13 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Add this to ensure Prisma is properly handled
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [...config.externals, ".prisma/client", "prisma"]
+    }
+    return config
+  },
 }
 
 module.exports = nextConfig
