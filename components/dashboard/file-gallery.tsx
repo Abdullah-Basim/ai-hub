@@ -126,7 +126,7 @@ export function FileGallery() {
               {file.type === "image" ? (
                 <div className="aspect-square bg-muted">
                   <img
-                    src={`https://${process.env.NEXT_PUBLIC_VERCEL_URL}/${file.storagePath}`}
+                    src={`/${file.storagePath}`}
                     alt={file.filename}
                     className="w-full h-full object-cover"
                     onError={(e) => {

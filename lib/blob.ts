@@ -1,6 +1,6 @@
 import { put, del } from "@vercel/blob"
 import { nanoid } from "nanoid"
-import { prisma } from "./prisma"
+import { prisma } from "@/lib/prisma"
 
 // Helper function to generate a unique filename
 export function generateUniqueFilename(originalFilename: string): string {

@@ -27,12 +27,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      setSession(session)
-      setUser(session?.user ?? null)
-      setIsLoading(false)
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+
+        if (error) {
+          console.error("Error getting session:", error)
+          setIsLoading(false)
+          return
+        }
+
+        setSession(session)
+        setUser(session?.user ?? null)
+      } catch (error) {
+        console.error("Unexpected error getting session:", error)
+      } finally {
+        setIsLoading(false)
+      }
     }
 
     getSession()
@@ -50,51 +63,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, router])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-    if (error) {
+      if (error) {
+        throw error
+      }
+
+      router.push("/dashboard")
+    } catch (error) {
+      console.error("Sign in error:", error)
       throw error
     }
-
-    router.push("/dashboard")
   }
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
+    try {
+      const { error, data } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
         },
-      },
-    })
+      })
 
-    if (error) {
+      if (error) {
+        throw error
+      }
+
+      // After sign up, create a user profile in our database
+      if (data.user) {
+        try {
+          await fetch("/api/users", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name,
+              email,
+            }),
+          })
+        } catch (profileError) {
+          console.error("Error creating user profile:", profileError)
+          // Continue anyway, as the auth account was created
+        }
+      }
+
+      router.push("/dashboard")
+    } catch (error) {
+      console.error("Sign up error:", error)
       throw error
     }
-
-    // After sign up, create a user profile in our database
-    await fetch("/api/users", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name,
-        email,
-      }),
-    })
-
-    router.push("/dashboard")
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/")
+    try {
+      await supabase.auth.signOut()
+      router.push("/")
+    } catch (error) {
+      console.error("Sign out error:", error)
+      throw error
+    }
   }
 
   const value = {

@@ -128,7 +128,8 @@ export function ImagePlayground({ model, usageCount, userPlan, files }: ImagePla
     // Find the file in the files array
     const file = files.find((f) => f.id === fileId)
     if (file) {
-      setSelectedFileUrl(`https://${process.env.NEXT_PUBLIC_VERCEL_URL}/${file.storagePath}`)
+      // Use relative URL to avoid CORS issues
+      setSelectedFileUrl(`/${file.storagePath}`)
     }
   }
 
@@ -217,7 +218,7 @@ export function ImagePlayground({ model, usageCount, userPlan, files }: ImagePla
                           onClick={() => handleFileSelect(file.id)}
                         >
                           <img
-                            src={`https://${process.env.NEXT_PUBLIC_VERCEL_URL}/${file.storagePath}`}
+                            src={`/${file.storagePath}`}
                             alt={file.filename}
                             className="w-full h-full object-cover"
                             onError={(e) => {
