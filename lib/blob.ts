@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 
 // Helper function to generate a unique filename
 export function generateUniqueFilename(originalFilename: string): string {
-  const extension = originalFilename.split(".").pop()
+  const extension = originalFilename.split(".").pop() || ""
   return `${nanoid()}.${extension}`
 }
 

@@ -14,6 +14,7 @@ import {
   LogOut,
   Sparkles,
   FileImage,
+  User,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -49,6 +50,11 @@ const navItems = [
     icon: History,
   },
   {
+    title: "Profile",
+    href: "/dashboard/profile",
+    icon: User,
+  },
+  {
     title: "Settings",
     href: "/dashboard/settings",
     icon: Settings,
@@ -57,7 +63,7 @@ const navItems = [
 
 export function DashboardSidebar() {
   const pathname = usePathname()
-  const { signOut } = useAuth()
+  const { signOut, user } = useAuth()
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-muted/40">
@@ -82,7 +88,16 @@ export function DashboardSidebar() {
           ))}
         </nav>
       </div>
-      <div className="border-t p-2">
+      <div className="border-t p-4">
+        <div className="mb-2 flex items-center gap-2 px-2">
+          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+            <User className="h-4 w-4" />
+          </div>
+          <div className="flex-1 truncate">
+            <p className="text-sm font-medium truncate">{user?.user_metadata?.name || user?.email}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+          </div>
+        </div>
         <Button variant="ghost" className="w-full justify-start gap-2 text-muted-foreground" onClick={() => signOut()}>
           <LogOut className="h-4 w-4" />
           Sign out

@@ -60,15 +60,15 @@
     "zod": "^3.24.1",
     "@supabase/supabase-js": "latest",
     "prisma": "latest",
-    "@supabase/auth-helpers-nextjs": "latest",
     "@google/generative-ai": "latest",
+    "@supabase/auth-helpers-nextjs": "latest",
     "@vercel/blob": "latest",
     "nanoid": "latest",
-    "@neondatabase/serverless": "latest",
     "@prisma/client": "latest",
     "child_process": "latest",
     "util": "latest",
-    "groq-sdk": "latest"
+    "groq-sdk": "latest",
+    "@neondatabase/serverless": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

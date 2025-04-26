@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
 import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
-import { Groq } from "groq-sdk"
+import { generateWithGroq } from "@/lib/groq"
 
 export async function POST(request: Request) {
   try {
@@ -64,23 +64,14 @@ export async function POST(request: Request) {
       }
     }
 
-    // Initialize Groq client
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY!,
-    })
+    // Generate text using our utility function
+    const result = await generateWithGroq(prompt, modelId)
 
-    // Call the Groq API
-    const completion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      model: modelId,
-    })
+    if (!result.success) {
+      return NextResponse.json({ error: result.error || "Failed to generate content" }, { status: 500 })
+    }
 
-    const text = completion.choices[0]?.message?.content || ""
+    const text = result.text
 
     // Update usage count for premium models
     if (model.tier !== "free") {

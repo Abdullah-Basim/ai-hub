@@ -19,7 +19,12 @@ export async function middleware(req: NextRequest) {
   }
 
   // If the user is signed in and trying to access auth pages, redirect to the dashboard
-  if (session && (req.nextUrl.pathname === "/login" || req.nextUrl.pathname === "/signup")) {
+  if (
+    session &&
+    (req.nextUrl.pathname === "/login" ||
+      req.nextUrl.pathname === "/signup" ||
+      req.nextUrl.pathname === "/reset-password")
+  ) {
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = "/dashboard"
     return NextResponse.redirect(redirectUrl)
@@ -29,5 +34,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/signup"],
+  matcher: ["/dashboard/:path*", "/login", "/signup", "/reset-password"],
 }
