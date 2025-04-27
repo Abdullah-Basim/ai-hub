@@ -175,3 +175,44 @@ model Webhook {
   // Metadata
   metadata    Json?    @default("{}")
 }
+
+// Models for AI models
+model Model {
+  id          String      @id @default(uuid())
+  name        String
+  description String
+  type        String      // text, image, video
+  tier        String      // free, premium, ultra-premium
+  provider    String      // openai, gemini, etc.
+  modelId     String      // actual model ID used in API calls
+  apiConfig   Json?       // additional API configuration
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  prompts     Prompt[]
+  modelUsage  ModelUsage[]
+}
+
+model Prompt {
+  id        String   @id @default(uuid())
+  userId    String
+  modelId   String
+  input     String   @db.Text
+  output    String?  @db.Text
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model     Model    @relation(fields: [modelId], references: [id])
+}
+
+model ModelUsage {
+  id        String   @id @default(uuid())
+  userId    String
+  modelId   String
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model     Model    @relation(fields: [modelId], references: [id])
+
+  @@unique([userId, modelId])
+}

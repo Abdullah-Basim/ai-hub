@@ -1,9 +1,9 @@
 import { prisma } from "./prisma"
 import { neon } from "@neondatabase/serverless"
-import * as env from "./env"
 
 // Create a SQL client using Neon's serverless driver
-export const sql = env.DATABASE_URL ? neon(env.DATABASE_URL) : null
+const databaseUrl = process.env.DATABASE_URL || process.env.aihub_DATABASE_URL
+export const sql = databaseUrl ? neon(databaseUrl) : null
 
 // Export the Prisma client
 export { prisma }

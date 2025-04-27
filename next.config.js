@@ -6,11 +6,7 @@ const nextConfig = {
     unoptimized: true,
   },
   experimental: {
-    // Use serverExternalPackages instead of serverComponentsExternalPackages
-    serverExternalPackages: ["@prisma/client", "bcrypt"],
-    serverActions: {
-      allowedOrigins: ["localhost:3000", "*.vercel.app"],
-    },
+    serverComponentsExternalPackages: ["@prisma/client", "bcrypt"],
   },
   env: {
     NEXT_PUBLIC_VERCEL_URL: process.env.VERCEL_URL || "localhost:3000",
